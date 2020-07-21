@@ -1,3 +1,20 @@
+/*
+  Copyright (C) 2020  Domótica Fácil con Jota en YouTube
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <utils.h>
 #include <constants.h>
 
@@ -18,42 +35,87 @@ int alignToCenter (int totalWidth, int fontWidth, int digits) {
     return startAt;
 }
 
-static byte lastByte;  // Último caracter del buffer
+// Cliente NTP
+boolean ntpEventTriggered = false;
+NTPSyncEvent_t ntpEvent;
+boolean ntpSignalSent = false;
+boolean syncEventTriggered = false; 
+
+// Actualizamos la hora
+void ntpUpdate() {
+	Serial.println("Actualizando hora");
+	if (!ntpSignalSent) {
+		NTP.begin(NTP_SERVER, 0, true, 0);
+		NTP.setInterval(3600);
+		ntpSignalSent = true;
+	}
+
+}
+
+// Sincronizamos los eventos
+void processSyncEvent(NTPSyncEvent_t ntpEvent) {
+	if (ntpEvent) {
+		Serial.print("Error en la sincronización de la hora: ");
+		if (ntpEvent == noResponse)
+			Serial.println("No puedo contactar con el Servidor NTP");
+		else if (ntpEvent == invalidAddress)
+			Serial.println("Dirección del Servidor NTP no válida");
+			else
+			Serial.println("Error desconocido");
+	}
+	else {
+		Serial.print("Hemos obtenido la hora NTP: ");
+		Serial.println(NTP.getTimeDateString(NTP.getLastNTPSync()));
+	}
+}
+
+static byte c1;  // Último caracter del buffer
 byte utf8ascii(byte ascii) {
-    if (ascii < 128) {
-    	lastByte = 0;
+    if (ascii<128) {
+    	c1 = 0;
         return(ascii);
     }
 
-    byte last = lastByte;
-    lastByte = ascii;
+    byte last = c1;
+    c1 = ascii;
 
     switch (last) {
-        case 0xC2: return  (ascii);  break;
-        case 0xC3: return  (ascii | 0xC0);  break;
-        case 0x82: if(ascii == 0xAC) return (0x80);
+       case 0xC2: return(ascii);  break;
+        case 0xC3: return(ascii | 0xC0);  break;
+        case 0x82: if(ascii == 0xAC) return(0x80);
     }
 
-    return  (0);
+    return(0);
 }
 
-String utf8ascii(String stringToConvert) {      
-        String stringToReturn = "";
-        char charTemp;
-        for (int i=0; i < stringToConvert.length(); i++) {
-                charTemp = utf8ascii(stringToConvert.charAt(i));
-                if (charTemp != 0) stringToReturn += charTemp;
+String utf8ascii(String s) {      
+        String r = "";
+        char c;
+        for (int i = 0; i < s.length(); i++) {
+                c = utf8ascii(s.charAt(i));
+                if (c != 0) r += c;
         }
-        return stringToReturn;
+        return r;
 }
 
-void utf8ascii(char* charToConvert) {      
+void utf8ascii(char* s) {      
         int k = 0;
-        char charTemp;
-        for (int i = 0; i < strlen(charToConvert); i++) {
-                charTemp = utf8ascii(charToConvert[i]);
-                if (charTemp != 0)
-                     charToConvert[k++] = charTemp;
+        char c;
+        for (int i = 0; i < strlen(s); i++) {
+                c = utf8ascii(s[i]);
+                if (c != 0)
+                     s[k++] = c;
         }
-        charToConvert[k] = 0;
+        s[k] = 0;
+}
+
+int octalToDecimal(int octal) {
+    int decimal = 0, i = 0, remainder;
+    while (octal != 0) {
+        remainder = octal % 10;
+        octal /= 10;
+        decimal += remainder * pow(8, i);
+        ++i;
+    }
+    return decimal;
 }

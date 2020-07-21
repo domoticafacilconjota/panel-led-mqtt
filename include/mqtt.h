@@ -15,26 +15,23 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef MQTT_H
+#define MQTT_H
+#define MSG_BUFFER_SIZE	(255)
 
-#include <Arduino.h>
-#include <NtpClientLib.h>
+extern unsigned long lastMsg;
+extern char msg[MSG_BUFFER_SIZE];
+extern int value;
+extern char* subscribersInScreen;
+extern char* currentSubscribers;
+extern char* otaImage;
+extern int currentMode;
 
-int countDigit(long long n);
-int alignToCenter (int totalWidth, int fontWidth, int digits);
+extern WiFiClient wifiClient;
+extern PubSubClient client;
 
-extern boolean ntpEventTriggered;
-extern NTPSyncEvent_t ntpEvent;
-extern boolean syncEventTriggered; 
+void mqttCallback(char* topic, byte* payload, unsigned int length);
+void mqttReconnect();
 
-void ntpUpdate();
-void processSyncEvent(NTPSyncEvent_t ntpEvent);
-
-byte utf8ascii(byte ascii);
-String utf8ascii(String s);
-void utf8ascii(char* s);
-
-int octalToDecimal(int octal);
 
 #endif
