@@ -24,8 +24,10 @@ extern char msg[MSG_BUFFER_SIZE];
 extern int value;
 extern char* subscribersInScreen;
 extern char* currentSubscribers;
-extern char* otaImage;
+extern char* otaData;
 extern int currentMode;
+
+extern boolean deserilize;
 
 extern WiFiClient wifiClient;
 extern PubSubClient client;
