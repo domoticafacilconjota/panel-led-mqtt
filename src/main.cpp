@@ -19,6 +19,7 @@
 #include <WiFiManager.h>                          // Configuración WiFi
 #include <SmartMatrix3.h>                         // Librería para controlar el panel LED
 #include <PubSubClient.h>                         // Cliente MQTT
+#include <ArduinoJson.h>                          // Arduino JSON parser
 #include <TimeLib.h>					                    // Control del tiempo sin RTC
 #include <NtpClientLib.h>				                  // Cliente NTP
 
@@ -106,9 +107,10 @@ void drawBitmap(int16_t x, int16_t y, const gimp32x32bitmap* bitmap) {
 }
 
 // Función para dibujar los bitmaps
-void drawBitmapMqtt(int16_t aX, int16_t aY) {
+void drawBitmapMqtt(int16_t aX, int16_t aY, const char* temp) {
   int led = 0;
-
+  // Creamos una copia temporal.
+  char* otaImage = (char*) temp;
   // Si la imagen enviada OTA no ha sido procesada, lo hacemos
   if (otaImage) {
     char *token;
@@ -149,6 +151,9 @@ void configModeCallback (WiFiManager *myWiFiManager) {
     backgroundLayer.drawString(0, 21, AZUL_CLARO, SSID);
     backgroundLayer.swapBuffers();
 }
+
+// JSON
+StaticJsonDocument<3500> document;
 
 void setup() {
   // Don Quijote de la Mancha
@@ -223,6 +228,8 @@ void setup() {
       // Nos suscribimos a los asuntos necesario. También te deberías suscribir a https://www.youtube.com/domoticafacilconjota
       client.subscribe(STATUS_TOPIC);
       client.subscribe(SUBSCRIBERS_TOPIC);
+      client.subscribe(OTA_DATA_STD);
+
   }
 	
   // Ahora que ya está todo configuramos. Intentamos sincronizar con un servidor NTP
@@ -310,30 +317,58 @@ void loop() {
 
     // Se solicita mostrar los datos de YouTube
   if (currentMode == CUSTOM) {
-    // Configuramos el fondo y la fuente
+    // ¿Problemas? Better Call Saul 
+    DeserializationError error;
+
+    // Sólo procedemos en el caso de que sea necesario
+    if (deserilize) {
+        error = deserializeJson(document, otaData);
+        deserilize = false;
+    }
+
+    // Configuramos el fondo
     backgroundLayer.fillScreen(NEGRO);
-    backgroundLayer.setFont(gohufont11b);
+
+    // En caso de error lo mostramos
+    if (error) {
+      Serial.print(F("deserializeJson() falló: "));
+      Serial.println(error.c_str());
+      return;
+    }
+
+    // Declaramos las constantes que utilizaremos para mostrar la información en el panel
+    const char* titleMqtt = document["title"];
+    const char* valueMqtt = document["value"];
+    const char* imageMqtt = document["image"];
 
     if (minute(currentTime) % 2 == 0) {
 
       // Imagen a la izquierda
-      drawBitmapMqtt(0,0);
-      // DF a la derecha
-      //backgroundLayer.drawString(alignToCenter(32, 6, strlen(subscribersInScreen)), 21, BLANCO, subscribersInScreen);
-      
-      backgroundLayer.swapBuffers();
+      if (titleMqtt && valueMqtt && imageMqtt) {
+        drawBitmapMqtt(0, 0, imageMqtt);
+        backgroundLayer.setFont(font3x5);
+        backgroundLayer.drawString(alignToCenter(64, 4, strlen(titleMqtt)), 1, BLANCO, titleMqtt);
+        backgroundLayer.setFont(font6x10);
+        backgroundLayer.drawString(32 + alignToCenter(32, 6, strlen(valueMqtt)), 14, BLANCO, valueMqtt);
 
+        backgroundLayer.swapBuffers();
+      }
     } else {
       // DF a la izquierda
 
       // Imagen a la derecha
-      drawBitmapMqtt(32,0);
-      //backgroundLayer.drawString(32 + alignToCenter(32, 6, strlen(subscribersInScreen)), 21, BLANCO, subscribersInScreen);
-      
-      backgroundLayer.swapBuffers();
+      if (titleMqtt && valueMqtt && imageMqtt) {
+        drawBitmapMqtt(32, 0, imageMqtt);
+        backgroundLayer.setFont(font3x5);
+        backgroundLayer.drawString(alignToCenter(64, 4, strlen(titleMqtt)), 1, BLANCO, titleMqtt);
+        backgroundLayer.setFont(font6x10);
+        backgroundLayer.drawString(alignToCenter(32, 6, strlen(valueMqtt)), 14, BLANCO, valueMqtt);
 
+        backgroundLayer.swapBuffers();      
+      }
     }
   }
 
   delay(1000);
+
 }

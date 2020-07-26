@@ -23,7 +23,10 @@ unsigned long lastMsg = 0;
 int value = 0;
 char* subscribersInScreen = (char*)"00000";
 char* currentSubscribers = (char*)"00000";
-char* otaImage;
+char* otaData;
+
+boolean deserilize = false;
+
 // MODOS
 int currentMode = WELCOME;
 
@@ -47,9 +50,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
 
   // OTA IMAGE
-  if (strcmp(topic, OTA_IMAGE) == 0) {
+  if (strcmp(topic, OTA_DATA_STD) == 0) {
     payload[length] = '\0';
-    otaImage = (char*)payload;
+    otaData = (char*)payload;
+
+    deserilize = true;
 
     currentMode = CUSTOM;
   }
@@ -72,7 +77,7 @@ void mqttReconnect() {
       // También nos volvemos a suscribir
       client.subscribe(STATUS_TOPIC);
       client.subscribe(SUBSCRIBERS_TOPIC);
-      client.subscribe(OTA_IMAGE);
+      client.subscribe(OTA_DATA_STD);
     } else {
       Serial.print("Fallo, rc=");
       Serial.print(client.state());
