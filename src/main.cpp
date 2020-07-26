@@ -18,10 +18,10 @@
 #include <Arduino.h>                              // Arduino
 #include <WiFiManager.h>                          // Configuración WiFi
 #include <SmartMatrix3.h>                         // Librería para controlar el panel LED
-#include <PubSubClient.h>                         // Cliente MQTT
-#include <ArduinoJson.h>                          // Arduino JSON parser
+#include <PubSubClient.h>                         // Cliente MQTT 0.8.2
+#include <ArduinoJson.h>                          // Arduino JSON parser 6.15.1
 #include <TimeLib.h>					                    // Control del tiempo sin RTC
-#include <NtpClientLib.h>				                  // Cliente NTP
+#include <NtpClientLib.h>				                  // Cliente NTP 3.0.2-beta
 
 #include <constants.h>                            // Cabecera de constantes
 #include <utils.h>                                // Cabecera de utilidades
