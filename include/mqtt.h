@@ -33,7 +33,7 @@ extern WiFiClient wifiClient;
 extern PubSubClient client;
 
 void mqttCallback(char* topic, byte* payload, unsigned int length);
-void mqttReconnect();
+void mqttReconnect(char* mqtt_user, char* mqtt_password);
 
 
 #endif

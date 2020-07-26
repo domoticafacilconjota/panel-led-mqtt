@@ -14,6 +14,8 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <FS.h>                                   // File System
+#include "SPIFFS.h"
 
 #include <Arduino.h>                              // Arduino
 #include <WiFiManager.h>                          // Configuración WiFi
@@ -155,11 +157,69 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 // JSON
 StaticJsonDocument<3500> document;
 
+// Variables MQTT
+char mqtt_server[40];
+char mqtt_port[8];
+char mqtt_user[40];
+char mqtt_password[40];
+
+// ¿Debemos guardar los datos?
+bool saveConfig = false;
+
+//callback notifying us of the need to save config
+void saveConfigCallback () {
+  saveConfig = true;
+  Serial.println("Debemos guardar la configuración");
+}
+
 void setup() {
   // Don Quijote de la Mancha
   Serial.begin(115200);
 
+  //read configuration from FS json
+  Serial.println("Montando FS...");
+
+  if (SPIFFS.begin(true)) {
+    if (SPIFFS.exists("/config.json")) {
+      Serial.println("SF montado");
+      //El fichero existe y leemos los datos
+      File configFile = SPIFFS.open("/config.json", "r");
+      if (configFile) {
+        size_t size = configFile.size();
+        // Allocate a buffer to store contents of the file.
+        std::unique_ptr<char[]> buf(new char[size]);
+
+        configFile.readBytes(buf.get(), size);
+        DynamicJsonDocument doc(256);
+        DeserializationError error = deserializeJson(doc, buf.get());
+        if (error) {
+          //TODO
+        }
+        JsonObject json = doc.as<JsonObject>();
+
+        serializeJson(json, Serial);
+        if (!json.isNull()) {
+
+          strcpy(mqtt_server, json["mqtt_server"]);
+          strcpy(mqtt_port, json["mqtt_port"]);
+          strcpy(mqtt_user, json["mqtt_user"]);
+          strcpy(mqtt_password, json["mqtt_password"]);
+
+        } else {
+          Serial.println("¿Ha explotado algo?");
+        }
+      }
+    }
+  } else {
+    Serial.println("SF no montado :(");
+  } 
+
   // Configuración de la WiFi AP / STA
+  WiFiManagerParameter custom_mqtt_server("server", "Servidor MQTT", mqtt_server, 40);
+  WiFiManagerParameter custom_mqtt_port("port", "Puerto MQTT", mqtt_server, 8);
+  WiFiManagerParameter custom_mqtt_user("user", "Usuario MQTT", mqtt_user, 40);
+  WiFiManagerParameter custom_mqtt_pass("pass", "Contraseña MQTT", mqtt_password, 40);
+
 	WiFiManager wifiManager;
 	WiFi.macAddress(mac);
 	sprintf(macFull, "%d", ESP.getEfuseMac());
@@ -199,25 +259,24 @@ void setup() {
 	WiFi.setAutoReconnect(true);
 
   wifiManager.setAPCallback(configModeCallback);
-  wifiManager.setTimeout(1); // Cambiar a 180
+  wifiManager.setTimeout(30); // Cambiar a 180
   wifiManager.setCleanConnect(true);
+  wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-  	if (wifiManager.autoConnect(SSID)) {
-		// En el caso de que la conexión sea un éxito.
-    // TODO
+  wifiManager.addParameter(&custom_mqtt_server);
+  wifiManager.addParameter(&custom_mqtt_port);
+  wifiManager.addParameter(&custom_mqtt_user);
+  wifiManager.addParameter(&custom_mqtt_pass);
 
-	} else {
-		// En el caso de que la conexión NO sea un éxito.
-
-    // TODO
+ 	if (!wifiManager.autoConnect(SSID)) {
+    delay(3000);
 	}
-
+  
   // Paramos el desplazamiento del texto
   scrollingLayer.stop();
 
-  // MQTT
-  client.setServer(MQTT_HOST, MQTT_PORT);
-  client.connect(MQTT_CLIENT, MQTT_USER, MQTT_PASS);
+  client.setServer(mqtt_server, atoi(mqtt_port));
+  client.connect(MQTT_CLIENT, mqtt_user, mqtt_password);
   client.setBufferSize(30000);
   client.setCallback(mqttCallback);
 
@@ -231,7 +290,32 @@ void setup() {
       client.subscribe(OTA_DATA_STD);
 
   }
-	
+
+  if (saveConfig) {
+    strcpy(mqtt_server, custom_mqtt_server.getValue());
+    strcpy(mqtt_port, custom_mqtt_port.getValue());
+    strcpy(mqtt_user, custom_mqtt_user.getValue());
+    strcpy(mqtt_password, custom_mqtt_pass.getValue());
+
+    DynamicJsonDocument doc(256);
+    JsonObject json = doc.to<JsonObject>();
+
+    json["mqtt_server"] = mqtt_server;
+    json["mqtt_port"]   = mqtt_port;
+    json["mqtt_user"]   = mqtt_user;
+    json["mqtt_password"]   = mqtt_password;
+
+    File configFile = SPIFFS.open("/config.json", "w");
+    if (!configFile) {
+      Serial.println("Fallo al abrir el fichero para escribir");
+    }
+
+    //serializeJson(json, Serial);
+    serializeJson(json, configFile);
+    configFile.close();
+    saveConfig = false;
+  }
+
   // Ahora que ya está todo configuramos. Intentamos sincronizar con un servidor NTP
 	NTP.onNTPSyncEvent([](NTPSyncEvent_t event) {
 		ntpEvent = event;
@@ -253,7 +337,7 @@ void loop() {
   // Si se produce una desconexión del cliente MQTT, intentamos reconectarnos
   if (!client.connected()) {
     Serial.println("No conectado a MQTT. Intentando reconectar.");
-    mqttReconnect();
+    mqttReconnect(mqtt_user, mqtt_password);
   }
 
   // Nos hacemos cargo de sincronizar con el servidor NTP cada cierto tiempo.

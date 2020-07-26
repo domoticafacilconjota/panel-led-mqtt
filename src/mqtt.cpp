@@ -16,6 +16,7 @@
 */
 
 #include <PubSubClient.h>
+#include <WiFiManager.h>
 #include <WiFi.h>
 #include <constants.h>
 
@@ -63,14 +64,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 WiFiClient wifiClient;
 PubSubClient client(wifiClient);
 
-void mqttReconnect() {
-      Serial.print("mqttReconnect");
+void mqttReconnect(char* mqtt_user, char* mqtt_password) {
+  Serial.print("mqttReconnect");
 
   // Reintentamos hasta que se conecte
   while (!client.connected()) {
     Serial.print("Intentando reconectar a MQTT");
     // Realizamos la conexión
-    if (client.connect(MQTT_CLIENT, MQTT_USER, MQTT_PASS)) {
+    if (client.connect(MQTT_CLIENT, mqtt_user, mqtt_password)) {
       Serial.println("Conectado a MQTT");
       // Una vez nos hayamos conectado, publicamos
       client.publish(SUBSCRIBERS_TOPIC, subscribersInScreen);

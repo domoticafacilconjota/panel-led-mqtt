@@ -27,23 +27,6 @@
 // Servidor NTP Global
 #define NTP_SERVER "es.pool.ntp.org"
 
-// MQTT
-#define MQTT_HOST IPAddress(192, 168, 1, 10)
-#define MQTT_PORT 1883
-/**
- * Recuerda crear un fichero llamado password.h
- * con las siguientes líneas:
-  
- #ifndef PASSWORD_H
- #define PASSWORD_H
- 
- #define MQTT_USER "tu_usuario_mqtt"
- #define MQTT_PASS "tu_contraseña_mqtt"
- 
- #endif
- 
- * 
- */
 #define MQTT_CLIENT "panel-led-mqtt"
 #define STATUS_TOPIC "plm/status"
 #define SUBSCRIBERS_TOPIC "plm/subscribers"
