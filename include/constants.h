@@ -47,7 +47,7 @@
 #define MQTT_CLIENT "panel-led-mqtt"
 #define STATUS_TOPIC "plm/status"
 #define SUBSCRIBERS_TOPIC "plm/subscribers"
-#define OTA_IMAGE "plm/image"
+#define OTA_DATA_STD "plm/ota_data"
 
 
 // Colores
