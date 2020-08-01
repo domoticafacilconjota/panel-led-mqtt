@@ -259,7 +259,7 @@ void setup() {
 	WiFi.setAutoReconnect(true);
 
   wifiManager.setAPCallback(configModeCallback);
-  wifiManager.setTimeout(30); // Cambiar a 180
+  wifiManager.setTimeout(120); // Cambiar a 180
   wifiManager.setCleanConnect(true);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
 
