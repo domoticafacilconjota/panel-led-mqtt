@@ -4,12 +4,19 @@ Panel LED compatible con Home Assistant que utiliza MQTT y un ESP32
 # TOPIC MQTT
 
 ### plm/ota_data
+#### Tipo de Payload: JSON
 
     {
         "title": "EJEMPLO (MAX 14)",
         "value": "25.3 (MAX 5)",
         "image": "R, G, B (x1024)"
     }
+ 
+ ### plm/subscribers
+ #### Tipo de Payload: String
+
+
+    123456
 
 # Licencia
   Copyright (C) 2020  Domótica Fácil con Jota en YouTube
